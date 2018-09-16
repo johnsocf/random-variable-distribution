@@ -58,8 +58,8 @@ def investigate_histogram_in_np(random_vars):
     print('bin edges', bin_edges)
 
 
-def build_histogram_in_matplotlib(random_vars):
-    plt.figure(1)
+def build_histogram_in_matplotlib(random_vars, figure_num, interactive_bool):
+    plt.figure(figure_num)
     n, bins, patches = plt.hist(x=random_vars, bins='auto', color='#0504aa',
                                 alpha=0.7, rwidth=0.85)
     plt.grid(axis='y', alpha=.75)
@@ -69,20 +69,20 @@ def build_histogram_in_matplotlib(random_vars):
     plt.text(23, 45, r'$\mu=15, b=3$')
     maxfreq = n.max()
     plt.ylim(ymax=np.ceil(maxfreq / 10) * 10 if maxfreq % 10 else maxfreq + 10)
-    interactive(True)
+    interactive(interactive_bool)
     plt.show()
 
-def build_q_q_plot_using_stats(random_vars):
-    plt.figure(2)
-    z = ((random_vars-np.mean(random_vars))/np.std(random_vars))
+def build_q_q_plot_using_stats(data, title, figure_num, interactive_bool):
+    plt.figure(figure_num)
+    z = ((data-np.mean(data))/np.std(data))
     stats.probplot(z, dist='norm', plot=plt)
-    plt.title('normal q-q plot')
-    interactive(False)
+    plt.title(title)
+    interactive(interactive_bool)
     plt.show()
 
 
-def calc_inferences_from_data():
-    length = len(er_in_sol)
+def calc_inferences_from_data(data):
+    length = len(data)
     mean = get_mean(length)
     deviation_from_mean_array = get_dev_from_mean(mean)
     squared_deviation_from_mean_array = square_deviations(deviation_from_mean_array)
@@ -90,15 +90,19 @@ def calc_inferences_from_data():
     approx_avg_of_devs = sum_of_squared_deviations / (length - 1)
     standard_deviation = math.sqrt(approx_avg_of_devs)
     standard_error = standard_deviation / math.sqrt(length)
-    random_var_set = [random.gauss(mean, standard_deviation) for _ in range(100)]
-    # print('mean', mean)
-    # print('sd: ', standard_deviation)
-    # print('standard_error: ', standard_error)
-    # print('new nums', random_var_set)
-    # print('length', length)
-    # investigate_histogram_in_np(random_var_set)
-    build_histogram_in_matplotlib(random_var_set)
-    build_q_q_plot_using_stats(random_var_set)
+    return mean, standard_deviation
 
 
-calc_inferences_from_data()
+def build_plots_for_speed_of_light(initial_data_set, random_var_built_data_set):
+    build_q_q_plot_using_stats(initial_data_set, 'q q plot of original data', 1, True)
+    build_histogram_in_matplotlib(random_var_built_data_set, 2, True)
+    build_q_q_plot_using_stats(random_var_built_data_set, 'q q plot of random var', 3, False)
+
+
+def init():
+    mean, standard_d = calc_inferences_from_data(er_in_sol)
+    random_var_set_speed_of_light = [random.gauss(mean, standard_d) for _ in range(100)]
+    build_plots_for_speed_of_light(er_in_sol, random_var_set_speed_of_light)
+
+
+init()
