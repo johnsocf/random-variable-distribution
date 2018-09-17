@@ -18,7 +18,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import interactive
-from scipy.stats import norm
+from scipy.stats import norm, poisson
 
 import scipy.stats as stats
 
@@ -27,6 +27,12 @@ from r_a_d import g_counts, g_time
 
 
 def get_mean_for_continuous(data, length):
+    total = 0;
+    for element in data:
+        total = total + element
+    return total / length
+
+def get_mean(data, length):
     total = 0;
     for element in data:
         total = total + element
@@ -88,6 +94,13 @@ def build_q_q_plot_using_stats(data, title, figure_num, interactive_bool):
     interactive(interactive_bool)
     plt.show()
 
+def build_q_q_plot_using_stats_for_poison(data, title, figure_num, interactive_bool):
+    plt.figure(figure_num)
+    stats.probplot(data, dist=stats.poisson, sparams=(2.5,), plot=plt)
+    interactive(interactive_bool)
+    plt.title(title)
+    plt.show()
+
 
 def calc_inferences_from_data(data):
     length = len(data)
@@ -101,25 +114,58 @@ def calc_inferences_from_data(data):
     return mean, standard_deviation
 
 
-def plot_pdf(data_set):
-    # ???
+def plot_pdf(data_set, title):
     fig, ax = plt.subplots(1, 1)
     x = np.linspace(norm.ppf(0.01), norm.ppf(0.99), 100)
-    ax.plot(data_set, norm.pdf(x), 'r-', lw=5, alpha=0.6, label='norm pdf')
+    ax.plot(x, norm.pdf(x), 'r-', lw=5, alpha=0.6, label='norm pdf')
     rv = norm()
-    ax.plot(data_set, rv.pdf(x), 'k-', lw=2, label='frozen pdf')
-    vals = norm.ppf([0.001, 0.5, 0.999])
-    np.allclose([0.001, 0.5, 0.999], norm.cdf(vals))
+    ax.plot(x, rv.pdf(x), 'k-', lw=2, label='frozen pdf')
+    vals = norm.ppf(data_set)
+    np.allclose(data_set, norm.cdf(vals))
     r = norm.rvs(size=1000)
     ax.hist(r, density=True, histtype='stepfilled', alpha=0.2)
+    ax.legend(loc='best', frameon=False)
+    plt.title(title)
+    interactive(False)
+    plt.show()
+
+def plot_poison_pmf(mean_calculated, title):
+    #mu - calculate (of counts) + sum and divide by length.
+    fig, ax = plt.subplots(1, 1)
+    mu = mean_calculated
+    mean, var, skew, kurt = poisson.stats(mu, moments='mvsk')
+    x = np.arange(poisson.ppf(0.01, mu),
+                  poisson.ppf(0.99, mu))
+    ax.plot(x, poisson.pmf(x, mu), 'bo', ms=8, label='poisson pmf')
+    ax.vlines(x, 0, poisson.pmf(x, mu), colors='b', lw=5, alpha=0.5)
+    rv = poisson(mu)
+    ax.vlines(x, 0, rv.pmf(x), colors='k', linestyles='-', lw=1,
+              label='frozen pmf')
+    ax.legend(loc='best', frameon=False)
+    plt.title(title)
+    interactive(False)
+    plt.show()
+
+def create_poisson_distribution():
+    fig, ax = plt.subplots(1, 1)
+    mu = 0.6
+    mean, var, skew, kurt = poisson.stats(mu, moments='mvsk')
+    x = np.arange(poisson.ppf(0.01, mu),
+                  poisson.ppf(0.99, mu))
+    ax.plot(x, poisson.pmf(x, mu), 'bo', ms=8, label='poisson pmf')
+    ax.vlines(x, 0, poisson.pmf(x, mu), colors='b', lw=5, alpha=0.5)
+    rv = poisson(mu)
+    ax.vlines(x, 0, rv.pmf(x), colors='k', linestyles='-', lw=1,
+            label='frozen pmf')
     ax.legend(loc='best', frameon=False)
     interactive(False)
     plt.show()
 
+
 def build_plots_for_speed_of_light(initial_data_set, random_var_built_data_set):
     build_q_q_plot_using_stats(initial_data_set, 'q q plot of original data', 1, True)
 
-    plot_pdf(random_var_built_data_set)
+    plot_pdf(random_var_built_data_set, 'pdf for speed of light')
     build_histogram_in_matplotlib(random_var_built_data_set, 'histogram for random variable set speed of light', 2, True)
     build_q_q_plot_using_stats(random_var_built_data_set, 'q q plot of random var', 3, False)
 
@@ -128,24 +174,32 @@ def set_up_speed_of_light_dist():
     random_var_set_speed_of_light = [random.gauss(mean, standard_d) for _ in range(100)]
     build_plots_for_speed_of_light(er_in_sol, random_var_set_speed_of_light)
 
+
 def set_up_geiger_dist():
     # X = # geiser counts over time.
     length = len(g_counts)
 
+    # poisson distribution
+
     # Construct a random variable that models the geiger counts **
+    # geiger counters are academically known to be poisson.
 
-    # get probability dist for geiser...
-    # stub
-    probability = [0]
+    create_poisson_distribution()
 
+    #2. build pdf
 
-    # get mean and standard d
-    mean = get_mean_for_discrete(g_time, probability, length)
+    # count
+    build_q_q_plot_using_stats_for_poison(g_counts, 'q q plot of geiger counts', 6, False)
 
-    # build data set based using rand based on mean and sd?
+    # might be overkill to also plot the count.
+    # build_histogram_in_matplotlib(g_counts, 'histogram of geiser', 6, False)
+
 
     # build pdf:
-    build_histogram_in_matplotlib(g_counts, 'histogram for geiger count', 4, True)
+    length = len(g_counts)
+    mean = get_mean_for_continuous(g_counts, length)
+    plot_poison_pmf(mean, 'pmf for poison')
+    build_histogram_in_matplotlib(g_counts, 'histogram for geiger count', 7, True)
 
     # build pdf
     # build q q plot (similar to existing function) + (overlay on histogram)
@@ -153,7 +207,7 @@ def set_up_geiger_dist():
 
 def init():
     set_up_speed_of_light_dist()
-    #set_up_geiger_dist()
+    set_up_geiger_dist()
 
 
 init()
